@@ -535,3 +535,113 @@ st.markdown("""
 - This is an enhanced calculator. Consult professionals for advice.
 - Assumptions: Simplified models; real scenarios vary.
 """)
+
+# ────────────────────────────────────────────────────────────────
+# Export / Save Results Section
+# ────────────────────────────────────────────────────────────────
+if st.session_state.results:
+    st.markdown("---")
+    st.header("Export Your Results")
+
+    # Add these to sidebar if you want them always visible
+    st.sidebar.header("Property Details (for Export)")
+    property_address = st.sidebar.text_input("Property Address", value="123 Example St, Salt Lake City, UT 84101")
+    listing_link = st.sidebar.text_input("Listing Link (Zillow/Realtor/etc)", value="")
+    picture_url = st.sidebar.text_input("Picture URL (optional)", value="")
+
+    # Optional preview
+    if picture_url:
+        try:
+            st.sidebar.image(picture_url, caption="Property Preview", use_column_width=True)
+        except:
+            st.sidebar.warning("Couldn't load the image preview")
+
+    # Collect everything into a nice dictionary
+    export_data = {
+        "Analysis Date": "January 19, 2026",  # You can make this dynamic later with import datetime
+        "Property Address": property_address,
+        "Listing Link": listing_link,
+        "Picture URL": picture_url,
+        **st.session_state.results  # All your calculated values
+    }
+
+    # Convert to DataFrame for clean CSV
+    import pandas as pd
+    df_export = pd.DataFrame([export_data])  # Single row for simplicity
+
+    csv_data = df_export.to_csv(index=False).encode('utf-8')
+
+    st.download_button(
+        label="📥 Download Results as CSV",
+        data=csv_data,
+        file_name=f"investment_analysis_{property_address.replace(' ', '_')[:30]}.csv",
+        mime="text/csv",
+        help="Open in Excel/Google Sheets for easy viewing & sharing"
+    )
+
+    st.info("""
+    This CSV includes:
+    - Property info (address, links)
+    - All inputs (purchase price, rents, expenses, etc.)
+    - All calculated metrics (NOI, cash flow, IRR, returns, etc.)
+    Great for emailing to partners or keeping records.
+    """)
+
+        # ────────────────────────────────────────────────────────────────
+    # PDF Export using reportlab
+    # ────────────────────────────────────────────────────────────────
+    from reportlab.lib.pagesizes import letter
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table
+    from reportlab.lib.styles import getSampleStyleSheet
+    from io import BytesIO
+
+    if st.button("Generate & Download PDF Report"):
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        styles = getSampleStyleSheet()
+        elements = []
+
+        elements.append(Paragraph("Real Estate Investment Analysis", styles['Title']))
+        elements.append(Spacer(1, 12))
+
+        elements.append(Paragraph(f"Property: {property_address}", styles['Heading2']))
+        if listing_link:
+            elements.append(Paragraph(f"Listing: {listing_link}", styles['Normal']))
+        if picture_url:
+            elements.append(Paragraph(f"Photo URL: {picture_url}", styles['Normal']))
+
+        elements.append(Spacer(1, 24))
+
+        # Basic Results Table
+        data = [
+            ["Metric", "Value"],
+            ["Purchase Price", f"${basics['purchase_price']:,.0f}"],
+            ["NOI", f"${basics['noi']:,.0f}"],
+            ["Annual Cash Flow", f"${basics['annual_cash_flow']:,.0f}"],
+            ["Cap Rate", f"{basics['cap_rate']:.2f}%"],
+            ["Cash-on-Cash Return", f"{basics['cash_on_cash_return']:.2f}%"]
+        ]
+        # Add more rows from your results as needed...
+
+        table = Table(data)
+        table.setStyle([
+            ('BACKGROUND', (0,0), (-1,0), '#4CAF50'),
+            ('TEXTCOLOR', (0,0), (-1,0), 'white'),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0,0), (-1,0), 12),
+            ('GRID', (0,0), (-1,-1), 1, '#dddddd')
+        ])
+        elements.append(table)
+
+        # Add more sections (e.g., Partnership Returns, Deep Dive) similarly...
+
+        doc.build(elements)
+        buffer.seek(0)
+
+        st.download_button(
+            label="📄 Download PDF Report",
+            data=buffer,
+            file_name=f"investment_report_{property_address.replace(' ', '_')[:30]}.pdf",
+            mime="application/pdf"
+        )
