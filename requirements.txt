@@ -2,3 +2,4 @@ streamlit
 numpy-financial
 plotly
 pandas
+reportlab
