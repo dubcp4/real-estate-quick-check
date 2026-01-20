@@ -268,8 +268,9 @@ with tab2:
 
             # Additional Deep Dive Features (e.g., Sensitivity Chart for Cap Rate)
             st.subheader("Cap Rate Sensitivity")
-            cap_rates = np.linspace(max(0.01, cap_rate - 0.05), cap_rate + 0.05, 5)
-            values = [noi / cr for cr in cap_rates]
+            current_cap_rate = basics['cap_rate'] / 100  # Convert to decimal
+            cap_rates = np.linspace(max(0.01, current_cap_rate - 0.05), current_cap_rate + 0.05, 5)
+            values = [basics['noi'] / cr for cr in cap_rates if cr > 0]
             sens_df = pd.DataFrame({'Cap Rate (%)': cap_rates * 100, 'Property Value': values})
             fig = px.line(sens_df, x='Cap Rate (%)', y='Property Value', title='Value at Different Cap Rates')
             st.plotly_chart(fig)
