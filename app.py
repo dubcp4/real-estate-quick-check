@@ -115,7 +115,7 @@ with tab1:
         breakeven_price = None
         if annual_cash_flow < 0 and noi > 0:
             affordable_monthly = noi / 12
-            max_loan = npf.pv(monthly_interest_rate, num_payments, -affordable_monthly) if monthly_interest_rate > 0 else affordable_monthly * num_payments
+            max_loan = -npf.pv(monthly_interest_rate, num_payments, affordable_monthly) if monthly_interest_rate > 0 else affordable_monthly * num_payments
             breakeven_price = max_loan + down_payment
         
         # Store results
@@ -228,7 +228,7 @@ with tab2:
 
             # Breakeven Analysis
             breakeven_months = np.ceil(repair_costs / max(1, basics['monthly_cash_flow'])) if basics['monthly_cash_flow'] > 0 else float('inf')
-            breakeven_occupancy = (total_annual_expenses + annual_mortgage + repair_costs / (holding_period or 1)) / basics['gross_annual_rent'] if basics['gross_annual_rent'] > 0 else 0
+            breakeven_occupancy = (basics['total_annual_expenses'] + basics['annual_mortgage'] + repair_costs / (holding_period or 1)) / basics['gross_annual_rent'] if basics['gross_annual_rent'] > 0 else 0
             value_at_target_cap = basics['noi'] / target_cap_rate if target_cap_rate > 0 else 0
             profitability_without_reno = basics['annual_cash_flow'] > 0
             profitability_with_reno = (basics['annual_cash_flow'] * holding_period + expected_arv_increase - repair_costs) > 0
