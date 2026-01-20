@@ -1,4 +1,4 @@
-# app.py - Enhanced Real Estate Investment Calculator (Updated with Expanded Deep Dive & PDF Integration)
+# app.py - Enhanced Real Estate Investment Calculator (Updated with Breakeven Price & Property Name in Exports)
 import streamlit as st
 import numpy_financial as npf
 import numpy as np
@@ -111,6 +111,13 @@ with tab1:
             total_interest_first_year += interest
             total_principal_first_year += principal
         
+        # Breakeven Price if Cash Flow Negative
+        breakeven_price = None
+        if annual_cash_flow < 0 and noi > 0:
+            affordable_monthly = noi / 12
+            max_loan = npf.pv(monthly_interest_rate, num_payments, -affordable_monthly) if monthly_interest_rate > 0 else affordable_monthly * num_payments
+            breakeven_price = max_loan + down_payment
+        
         # Store results
         st.session_state.results = {
             'purchase_price': purchase_price,
@@ -136,7 +143,8 @@ with tab1:
             'total_principal_first_year': total_principal_first_year,
             'balance_after_year1': balance,
             'monthly_interest_rate': monthly_interest_rate,
-            'num_payments': num_payments
+            'num_payments': num_payments,
+            'breakeven_price': breakeven_price
         }
         
         # Display
@@ -160,6 +168,10 @@ with tab1:
         st.write(f"Monthly Cash Flow: ${monthly_cash_flow:,.2f}")
         st.write(f"Cap Rate: {cap_rate:.2f}%")
         st.write(f"Cash-on-Cash Return: {cash_on_cash_return:.2f}%")
+        
+        if annual_cash_flow < 0 and breakeven_price is not None:
+            st.subheader("Breakeven Analysis")
+            st.write(f"Maximum Offer Price for Breakeven Cash Flow: ${breakeven_price:,.2f} (keeps down payment at ${down_payment:,.2f})")
         
         st.subheader("First Year Amortization")
         st.write(f"Interest Paid: ${total_interest_first_year:,.2f}")
@@ -297,6 +309,9 @@ if st.session_state.results:
     basics = st.session_state.results
     deep_dive = st.session_state.deep_dive_results if 'deep_dive_results' in st.session_state else {}
 
+    # Sanitize property name for filename
+    safe_name = property_name.replace(' ', '_').replace('.', '').replace('/', '') if property_name else "analysis"
+
     if st.button("Download CSV"):
         export_data = {
             "Property Name": property_name,
@@ -308,7 +323,7 @@ if st.session_state.results:
         }
         df = pd.DataFrame([export_data])
         csv = df.to_csv(index=False).encode('utf-8')
-        st.download_button("Download CSV", csv, "analysis.csv", "text/csv")
+        st.download_button("Download CSV", csv, f"{safe_name}.csv", "text/csv")
 
     if st.button("Generate PDF Report"):
         buffer = BytesIO()
@@ -347,6 +362,8 @@ if st.session_state.results:
             ["Cap Rate", f"{basics['cap_rate']:.2f}%"],
             ["Cash-on-Cash Return", f"{basics['cash_on_cash_return']:.2f}%"]
         ]
+        if basics.get('breakeven_price'):
+            data_basic.append(["Breakeven Price (for Positive CF)", f"${basics['breakeven_price']:,.2f}"])
 
         table_basic = Table(data_basic, colWidths=[3*inch, 3*inch])
         table_basic.setStyle([
@@ -389,7 +406,7 @@ if st.session_state.results:
 
         doc.build(flowables)
         buffer.seek(0)
-        st.download_button("Download PDF", buffer, "report.pdf", "application/pdf")
+        st.download_button("Download PDF", buffer, f"{safe_name}.pdf", "application/pdf")
 
 st.markdown("""
 ### Notes:
